@@ -6,7 +6,8 @@ from PyQt5.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
     QPushButton, QTextEdit, QTableWidget, QTableWidgetItem, QGroupBox,
     QComboBox, QMessageBox, QHeaderView, QRadioButton, QButtonGroup,
-    QFrame, QDialog, QFormLayout, QDialogButtonBox, QSpinBox, QSplitter
+    QFrame, QDialog, QFormLayout, QDialogButtonBox, QSpinBox, QSplitter,
+    QCheckBox
 )
 from PyQt5.QtCore import Qt
 from styling import app_stylesheet, title_font, subtitle_font
@@ -49,9 +50,10 @@ def binary_search(data, target):
 
 # --- Dialog CRUD ---
 class CRUDDialog(QDialog):
-    def __init__(self, parent=None, item_data=None):
+    def __init__(self, parent=None, item_data=None, next_id=None):
         super().__init__(parent)
         self.item_data = item_data
+        self.next_id = next_id
         self.setWindowTitle("Tambah Barang Baru" if not item_data else "Ubah Data Barang")
         self.setMinimumWidth(360)
         self.setStyleSheet(app_stylesheet())
@@ -70,6 +72,17 @@ class CRUDDialog(QDialog):
         if self.item_data:
             self.input_id.setText(str(self.item_data["id"]))
             self.input_id.setEnabled(False)
+        else:
+            # For new items: allow auto-generate ID toggle
+            self.chk_auto_id = QCheckBox("Isi ID otomatis")
+            self.chk_auto_id.setChecked(True)
+            # populate next_id if provided
+            if self.next_id is not None:
+                self.input_id.setText(str(self.next_id))
+                self.input_id.setEnabled(False)
+            else:
+                self.input_id.setEnabled(True)
+            self.chk_auto_id.stateChanged.connect(self.on_auto_id_toggled)
 
         self.input_nama = QLineEdit()
         self.input_nama.setPlaceholderText("Contoh: Beras Segitiga 5kg")
@@ -126,6 +139,18 @@ class CRUDDialog(QDialog):
 
         self.result_data = {"id": item_id, "nama": nama, "kategori": kategori, "stok": stok}
         self.accept()
+
+    def on_auto_id_toggled(self, state):
+        # When auto is checked, lock and fill the ID field with next_id (if available)
+        checked = (state == Qt.Checked)
+        if checked and self.next_id is not None:
+            self.input_id.setText(str(self.next_id))
+            self.input_id.setEnabled(False)
+        else:
+            self.input_id.setEnabled(True)
+            # if toggled off, clear to prompt manual input
+            if not checked:
+                self.input_id.clear()
 
     def get_data(self):
         return getattr(self, "result_data", None)
@@ -277,6 +302,8 @@ class SearchApp(QWidget):
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
         self.table.setSelectionMode(QTableWidget.SingleSelection)
         self.table.setAlternatingRowColors(True)
+        # Disable edit ID Barang
+        self.table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.table.itemClicked.connect(self.on_table_row_selected)
         tbl_v.addWidget(self.table)
 
@@ -425,7 +452,9 @@ class SearchApp(QWidget):
     def refresh_table(self):
         self.table.setRowCount(len(self.data))
         for r, item in enumerate(self.data):
-            self.table.setItem(r, 0, QTableWidgetItem(str(item["id"])))
+            id_item = QTableWidgetItem(str(item["id"]))
+            id_item.setFlags(id_item.flags() & ~Qt.ItemIsEditable)
+            self.table.setItem(r, 0, id_item)
             self.table.setItem(r, 1, QTableWidgetItem(item["nama"]))
             self.table.setItem(r, 2, QTableWidgetItem(item.get("kategori", "")))
             self.table.setItem(r, 3, QTableWidgetItem(str(item.get("stok", 0))))
@@ -468,7 +497,13 @@ class SearchApp(QWidget):
     # CRUD
     # -------------------------------------------------------
     def action_crud_add(self):
-        dlg = CRUDDialog(self)
+        # compute next available numeric ID
+        try:
+            existing_ids = [int(x["id"]) for x in self.data_original if str(x.get("id","")).strip() != ""]
+            next_id = max(existing_ids) + 1 if existing_ids else 1000
+        except Exception:
+            next_id = 1000
+        dlg = CRUDDialog(self, next_id=next_id)
         if dlg.exec_():
             new = dlg.get_data()
             if new:
@@ -489,7 +524,12 @@ class SearchApp(QWidget):
         if row < 0:
             QMessageBox.warning(self, "Pilih Baris", "Pilih barang di tabel terlebih dahulu.")
             return
-        item_id = int(self.table.item(row, 0).text())
+        cell_text = self.table.item(row, 0).text() if self.table.item(row, 0) else ""
+        try:
+            item_id = int(cell_text)
+        except (ValueError, TypeError):
+            QMessageBox.warning(self, "Format Salah", f"ID pada baris yang dipilih tidak valid: {cell_text}\nHarap perbaiki menjadi angka sebelum mengubah.")
+            return
         orig = next((x for x in self.data_original if x["id"] == item_id), None)
         if not orig:
             return
@@ -511,7 +551,12 @@ class SearchApp(QWidget):
         if row < 0:
             QMessageBox.warning(self, "Pilih Baris", "Pilih barang di tabel terlebih dahulu.")
             return
-        item_id   = int(self.table.item(row, 0).text())
+        cell_text = self.table.item(row, 0).text() if self.table.item(row, 0) else ""
+        try:
+            item_id = int(cell_text)
+        except (ValueError, TypeError):
+            QMessageBox.warning(self, "Format Salah", f"ID pada baris yang dipilih tidak valid: {cell_text}\nHarap perbaiki menjadi angka sebelum menghapus.")
+            return
         item_name = self.table.item(row, 1).text()
         reply = QMessageBox.question(
             self, "Konfirmasi Hapus",
