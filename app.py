@@ -12,7 +12,7 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt
 from styling import app_stylesheet, title_font, subtitle_font
 
-# --- Algoritma Pencarian & Perekam Langkah ---
+# Algoritma Pencarian Sekuensial
 def sequential_search(data, target):
     langkah = 0
     steps_log = []
@@ -27,6 +27,7 @@ def sequential_search(data, target):
     steps_log.append(f"-> Target {target} tidak ditemukan di seluruh data.")
     return None, langkah, steps_log
 
+# Algoritma Pencarian Biner
 def binary_search(data, target):
     kiri, kanan = 0, len(data) - 1
     langkah = 0
@@ -48,7 +49,7 @@ def binary_search(data, target):
     steps_log.append(f"-> Target {target} tidak ditemukan dalam pencarian biner.")
     return None, langkah, steps_log
 
-# --- Dialog CRUD ---
+# Dialog CRUD untuk Tambah/Ubah/Hapus Data
 class CRUDDialog(QDialog):
     def __init__(self, parent=None, item_data=None, next_id=None):
         super().__init__(parent)
@@ -73,10 +74,10 @@ class CRUDDialog(QDialog):
             self.input_id.setText(str(self.item_data["id"]))
             self.input_id.setEnabled(False)
         else:
-            # For new items: allow auto-generate ID toggle
+            # Untuk item baru: toggle auto-generate ID
             self.chk_auto_id = QCheckBox("Isi ID otomatis")
             self.chk_auto_id.setChecked(True)
-            # populate next_id if provided
+            # Isi next_id jika tersedia
             if self.next_id is not None:
                 self.input_id.setText(str(self.next_id))
                 self.input_id.setEnabled(False)
@@ -141,14 +142,14 @@ class CRUDDialog(QDialog):
         self.accept()
 
     def on_auto_id_toggled(self, state):
-        # When auto is checked, lock and fill the ID field with next_id (if available)
+        # Ketika auto dicentang, kunci dan isi field ID dengan next_id (jika tersedia)
         checked = (state == Qt.Checked)
         if checked and self.next_id is not None:
             self.input_id.setText(str(self.next_id))
             self.input_id.setEnabled(False)
         else:
             self.input_id.setEnabled(True)
-            # if toggled off, clear to prompt manual input
+            # jika dimatikan, kosongkan untuk prompt input manual
             if not checked:
                 self.input_id.clear()
 
@@ -156,7 +157,7 @@ class CRUDDialog(QDialog):
         return getattr(self, "result_data", None)
 
 
-# --- Dialog Detail Barang (Pop-up otomatis) ---
+# Dialog Detail Barang (Pop-up otomatis)
 class ProductDetailDialog(QDialog):
     """Pop-up yang menampilkan detail barang hasil pencarian."""
     def __init__(self, parent=None, item_data=None, algoritma=""):
@@ -170,7 +171,7 @@ class ProductDetailDialog(QDialog):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
-        # --- Header banner ---
+        # Header banner
         header = QFrame()
         header.setStyleSheet(
             "background: qlineargradient(x1:0,y1:0,x2:1,y2:0,"
@@ -198,14 +199,14 @@ class ProductDetailDialog(QDialog):
 
         layout.addWidget(header)
 
-        # --- Body ---
+        # Body tabel data
         body = QFrame()
         body.setStyleSheet("background-color: #ffffff;")
         b_layout = QVBoxLayout(body)
         b_layout.setContentsMargins(16, 14, 16, 14)
         b_layout.setSpacing(12)
 
-        # Data table
+        # Tabel data
         ROW_HEIGHT    = 34   # px per baris data
         HEADER_HEIGHT = 36   # px header kolom
 
@@ -279,7 +280,7 @@ class ProductDetailDialog(QDialog):
         self.adjustSize()
 
 
-# --- Aplikasi GUI Utama ---
+# Aplikasi GUI Utama
 class SearchApp(QWidget):
     def __init__(self):
         super().__init__()
@@ -315,15 +316,12 @@ class SearchApp(QWidget):
             QMessageBox.critical(self, "Gagal Simpan", f"Gagal menyimpan ke gudang.json:\n{e}")
             return False
 
-    # =========================================================================
-    # MAIN UI (Single Dashboard Page)
-    # =========================================================================
     def init_ui(self):
         root = QHBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
 
-        # -- LEFT SIDEBAR --
+        # Sidebar kiri
         sidebar = QFrame()
         sidebar.setObjectName("sidebar_frame")
         sidebar.setFixedWidth(220)
@@ -353,7 +351,7 @@ class SearchApp(QWidget):
 
         sb.addSpacing(20)
 
-        # Sorting controls inside sidebar
+        # Kontrol pengurutan di sidebar
         lbl_sort_hdr = QLabel("Pengurutan Data")
         lbl_sort_hdr.setStyleSheet("font-weight:700; color:#0b5ed7; font-size:12px;")
         sb.addWidget(lbl_sort_hdr)
@@ -380,7 +378,7 @@ class SearchApp(QWidget):
 
         root.addWidget(sidebar)
 
-        # -- RIGHT CONTENT --
+        # Konten utama
         content = QWidget()
         cl = QVBoxLayout(content)
         cl.setContentsMargins(20, 20, 20, 20)
@@ -409,7 +407,7 @@ class SearchApp(QWidget):
         body_splitter.setHandleWidth(5)
         body_splitter.setChildrenCollapsible(False)
 
-        # ---- LEFT: Inventory Table Card ----
+        # Tabel Inventaris
         tbl_card = QGroupBox("Daftar Inventaris Gudang")
         tbl_v = QVBoxLayout(tbl_card)
         tbl_v.setContentsMargins(8, 6, 8, 8)
@@ -425,12 +423,12 @@ class SearchApp(QWidget):
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
         self.table.setSelectionMode(QTableWidget.SingleSelection)
         self.table.setAlternatingRowColors(True)
-        # Disable edit ID Barang
+        # Matikan pengeditan ID Barang
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.table.itemClicked.connect(self.on_table_row_selected)
         tbl_v.addWidget(self.table)
 
-        # CRUD buttons under table
+        # Tombol CRUD di bawah tabel
         crud_row = QHBoxLayout()
         crud_row.setSpacing(8)
         btn_add = QPushButton("➕ Tambah")
@@ -449,7 +447,7 @@ class SearchApp(QWidget):
 
         body_splitter.addWidget(tbl_card)
 
-        # ---- RIGHT: Search & Analysis Card ----
+        # Panel Pencarian dan Analisis
         search_card = QGroupBox("Pencarian & Analisis Performa")
         search_card.setMinimumWidth(280)
         search_card.setMaximumWidth(520)
@@ -513,7 +511,7 @@ class SearchApp(QWidget):
 
         sv.addStretch(1)
 
-        # "Tampilkan Grafik" button — hidden until a search is done
+        # Tombol "Tampilkan Grafik" — disembunyikan hingga pencarian selesai
         self.btn_show_chart = QPushButton("📊 Tampilkan Grafik Perbandingan")
         self.btn_show_chart.setVisible(False)
         self.btn_show_chart.clicked.connect(self.show_chart)
@@ -521,23 +519,21 @@ class SearchApp(QWidget):
 
         body_splitter.addWidget(search_card)
 
-        # Set initial size ratio 65% table : 35% search
+        # Atur rasio ukuran awal 65% tabel : 35% pencarian
         body_splitter.setSizes([650, 350])
 
         cl.addWidget(body_splitter, stretch=1)
 
         root.addWidget(content)
 
-        # Step mode flag
+        # Flag untuk mode step-by-step
         self.step_mode_enabled = False
 
-        # Initial population
+        # Inisialisasi tabel dan statistik
         self.refresh_table()
         self.update_inventory_stats()
 
-    # -------------------------------------------------------
-    # Helper: stat card builder
-    # -------------------------------------------------------
+    # Builder stat card
     def _make_stat_card(self, parent_layout, value, label_text, warn=False):
         card = QFrame()
         card.setObjectName("stats_card")
@@ -553,9 +549,7 @@ class SearchApp(QWidget):
         parent_layout.addWidget(card)
         return card, lbl_val
 
-    # -------------------------------------------------------
-    # Data helpers
-    # -------------------------------------------------------
+    # Update statistik inventaris
     def update_inventory_stats(self):
         if not self.data:
             for lbl in (self.lbl_stats_cats, self.lbl_stats_items,
@@ -600,9 +594,7 @@ class SearchApp(QWidget):
         if cell:
             self.input_id.setText(cell.text())
 
-    # -------------------------------------------------------
-    # Sidebar actions
-    # -------------------------------------------------------
+    # Aksi Sidebar
     def action_reset_data(self):
         self.load_data()
         self.apply_sorting()
@@ -616,9 +608,7 @@ class SearchApp(QWidget):
         self.lbl_status.setText(f"🎮 Mode Step by Step: {status}")
         self.lbl_status.setStyleSheet("color: #0b5ed7; font-weight: 500; font-size: 12px; margin-top: -5px; margin-bottom: 5px;")
 
-    # -------------------------------------------------------
-    # CRUD
-    # -------------------------------------------------------
+    # CRUD Operations
     def action_crud_add(self):
         # compute next available numeric ID
         try:
@@ -694,9 +684,7 @@ class SearchApp(QWidget):
             if self.save_data_to_json():
                 QMessageBox.information(self, "Sukses", "Barang berhasil dihapus!")
 
-    # -------------------------------------------------------
-    # Search
-    # -------------------------------------------------------
+    # Fitur Pencarian
     def on_search(self):
         text = self.input_id.text().strip()
         if not text:
@@ -710,14 +698,14 @@ class SearchApp(QWidget):
             self.input_id.setFocus()
             return
 
-        # Determine algorithm choice
+        # Pilihan algoritma
         pilihan = "Kedua Algoritma"
         if self.radio_seq.isChecked():
             pilihan = "Sequential Search"
         elif self.radio_bin.isChecked():
             pilihan = "Binary Search"
 
-        # Reset stored results
+        # Bersihkan hasil yang disimpan
         self._last_seq_result = None
         self._last_bin_result = None
 
@@ -727,7 +715,7 @@ class SearchApp(QWidget):
 
         row_idx = 0
 
-        # Helper function to insert a read-only item
+        # Fungsi helper untuk menyisipkan item read-only
         def add_result_item(row, col, text, is_red=False):
             item = QTableWidgetItem(text)
             item.setFlags(item.flags() & ~Qt.ItemIsEditable)
@@ -757,7 +745,7 @@ class SearchApp(QWidget):
             row_idx += 1
 
         if pilihan in ("Kedua Algoritma", "Binary Search"):
-            # Binary Search wajib menggunakan data yang terurut berdasarkan ID secara Ascending.
+        # Binary Search memerlukan data terurut berdasarkan ID ascending.
             # Kami mengurutkan salinan data agar pencarian selalu sukses tanpa merusak urutan visual tabel.
             data_sorted = sorted(self.data, key=lambda x: int(x["id"]))
             t0 = time.perf_counter()
@@ -785,11 +773,11 @@ class SearchApp(QWidget):
         if found_item:
             self._highlight_table_row(found_item["id"])
 
-        # Show the chart button only when we have at least one result
+        # Tampilkan tombol grafik hanya ketika ada setidaknya satu hasil
         has_results = (self._last_seq_result is not None or self._last_bin_result is not None)
         self.btn_show_chart.setVisible(has_results)
 
-        # --- Pop-up otomatis: tampilkan detail barang jika ditemukan ---
+        # Pop-up otomatis: tampilkan detail barang jika ditemukan
         if found_item:
             dlg = ProductDetailDialog(self, item_data=found_item, algoritma=pilihan)
             dlg.exec_()
@@ -803,9 +791,7 @@ class SearchApp(QWidget):
                 self.table.scrollToItem(cell)
                 break
 
-    # -------------------------------------------------------
-    # Chart
-    # -------------------------------------------------------
+    # Tampilkan Grafik Perbandingan
     def show_chart(self):
         try:
             import matplotlib
@@ -900,7 +886,7 @@ class SearchApp(QWidget):
         ax2.spines["right"].set_visible(False)
         ax2.tick_params(colors="#475569")
 
-        # Legend
+        # Legenda
         patches = []
         if seq:
             patches.append(mpatches.Patch(color=PINK, label="Sequential Search"))
@@ -913,9 +899,7 @@ class SearchApp(QWidget):
         plt.tight_layout(rect=[0, 0.06, 1, 1])
         plt.show()
 
-    # -------------------------------------------------------
-    # Result formatters
-    # -------------------------------------------------------
+    # Format hasil pencarian
     def _format_hasil(self, nama_alg, waktu, langkah, hasil):
         if nama_alg.startswith("Sequential"):
             bg, border, tc = "#fdf2f8", "#fbcfe8", "#db2777"
