@@ -156,6 +156,129 @@ class CRUDDialog(QDialog):
         return getattr(self, "result_data", None)
 
 
+# --- Dialog Detail Barang (Pop-up otomatis) ---
+class ProductDetailDialog(QDialog):
+    """Pop-up yang menampilkan detail barang hasil pencarian."""
+    def __init__(self, parent=None, item_data=None, algoritma=""):
+        super().__init__(parent)
+        self.setWindowTitle("Detail Barang Ditemukan")
+        self.setStyleSheet(parent.styleSheet() if parent else "")
+        self._build_ui(item_data, algoritma)
+
+    def _build_ui(self, item, algo):
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        # --- Header banner ---
+        header = QFrame()
+        header.setStyleSheet(
+            "background: qlineargradient(x1:0,y1:0,x2:1,y2:0,"
+            "stop:0 #0b5ed7, stop:1 #38bdf8);"
+        )
+        h_layout = QVBoxLayout(header)
+        h_layout.setContentsMargins(20, 16, 20, 12)
+        h_layout.setSpacing(4)
+
+        title_lbl = QLabel("Barang Ditemukan")
+        title_lbl.setStyleSheet(
+            "color: #ffffff; font-size: 16px; font-weight: 700;"
+            "background: transparent;"
+        )
+        title_lbl.setAlignment(Qt.AlignCenter)
+        h_layout.addWidget(title_lbl)
+
+        algo_lbl = QLabel(f"Algoritma: {algo}")
+        algo_lbl.setStyleSheet(
+            "color: #dbeafe; font-size: 11px; font-weight: 500;"
+            "background: transparent;"
+        )
+        algo_lbl.setAlignment(Qt.AlignCenter)
+        h_layout.addWidget(algo_lbl)
+
+        layout.addWidget(header)
+
+        # --- Body ---
+        body = QFrame()
+        body.setStyleSheet("background-color: #ffffff;")
+        b_layout = QVBoxLayout(body)
+        b_layout.setContentsMargins(16, 14, 16, 14)
+        b_layout.setSpacing(12)
+
+        # Data table
+        ROW_HEIGHT    = 34   # px per baris data
+        HEADER_HEIGHT = 36   # px header kolom
+
+        rows_data = [
+            ("ID Barang", str(item.get("id", "-"))),
+            ("Nama Barang", item.get("nama", "-")),
+            ("Kategori", item.get("kategori", "-")),
+            ("Stok", str(item.get("stok", 0))),
+        ]
+        num_rows = len(rows_data)
+
+        tbl = QTableWidget(num_rows, 2)
+        tbl.setHorizontalHeaderLabels(["Field", "Nilai"])
+        tbl.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        tbl.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+        tbl.horizontalHeader().setFixedHeight(HEADER_HEIGHT)
+        tbl.verticalHeader().setVisible(False)
+        tbl.setEditTriggers(QTableWidget.NoEditTriggers)
+        tbl.setSelectionMode(QTableWidget.NoSelection)
+        tbl.setFocusPolicy(Qt.NoFocus)
+        tbl.setAlternatingRowColors(True)
+        tbl.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        tbl.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
+        for r, (field, val) in enumerate(rows_data):
+            tbl.setRowHeight(r, ROW_HEIGHT)
+            f_item = QTableWidgetItem(field)
+            f_item.setFlags(f_item.flags() & ~Qt.ItemIsEditable)
+            v_item = QTableWidgetItem(val)
+            v_item.setFlags(v_item.flags() & ~Qt.ItemIsEditable)
+            tbl.setItem(r, 0, f_item)
+            tbl.setItem(r, 1, v_item)
+
+        # Hitung tinggi pas: header + semua baris + 2px border
+        exact_height = HEADER_HEIGHT + (ROW_HEIGHT * num_rows) + 2
+        tbl.setFixedHeight(exact_height)
+
+        b_layout.addWidget(tbl)
+
+        # Stok status badge
+        stok_val = int(item.get("stok", 0))
+        if stok_val >= 30:
+            stok_color, stok_bg, stok_label = "#16a34a", "#dcfce7", "Stok Aman"
+        elif stok_val >= 10:
+            stok_color, stok_bg, stok_label = "#ea580c", "#fff7ed", "Stok Menipis"
+        else:
+            stok_color, stok_bg, stok_label = "#dc2626", "#fef2f2", "Stok Kritis"
+
+        badge = QLabel(f"{stok_label}  —  {stok_val} unit")
+        badge.setAlignment(Qt.AlignCenter)
+        badge.setStyleSheet(
+            f"background-color: {stok_bg}; color: {stok_color};"
+            f"border: 1px solid {stok_color}; border-radius: 10px;"
+            "padding: 5px 14px; font-size: 12px; font-weight: 700;"
+        )
+        b_layout.addWidget(badge, alignment=Qt.AlignCenter)
+
+        # Close button
+        btn_close = QPushButton("Tutup")
+        btn_close.setStyleSheet(
+            "background-color: #0b5ed7; color: white; border-radius: 6px;"
+            "padding: 8px 22px; font-weight: 600; font-size: 13px;"
+        )
+        btn_close.setCursor(Qt.PointingHandCursor)
+        btn_close.clicked.connect(self.accept)
+        b_layout.addWidget(btn_close, alignment=Qt.AlignCenter)
+
+        layout.addWidget(body)
+        # Dialog menyesuaikan ukuran sendiri berdasarkan konten
+        self.setMinimumWidth(460)
+        self.adjustSize()
+
+
 # --- Aplikasi GUI Utama ---
 class SearchApp(QWidget):
     def __init__(self):
@@ -665,6 +788,12 @@ class SearchApp(QWidget):
         # Show the chart button only when we have at least one result
         has_results = (self._last_seq_result is not None or self._last_bin_result is not None)
         self.btn_show_chart.setVisible(has_results)
+
+        # --- Pop-up otomatis: tampilkan detail barang jika ditemukan ---
+        if found_item:
+            dlg = ProductDetailDialog(self, item_data=found_item, algoritma=pilihan)
+            dlg.exec_()
+
 
     def _highlight_table_row(self, item_id):
         for r in range(self.table.rowCount()):
