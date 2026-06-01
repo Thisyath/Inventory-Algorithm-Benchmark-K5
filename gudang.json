@@ -310,5 +310,17 @@
     "nama": "Susu bear brand 189ml",
     "kategori": "Sembako",
     "stok": 1
+  },
+  {
+    "id": 1053,
+    "nama": "Garnier Face Wash Lemon 100g",
+    "kategori": "Perawatan Pribadi",
+    "stok": 6
+  },
+  {
+    "id": 1054,
+    "nama": "Alkohol 70% Onemed 100ml",
+    "kategori": "Sembako",
+    "stok": 5
   }
 ]
