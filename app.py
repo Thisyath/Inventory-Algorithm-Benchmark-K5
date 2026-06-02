@@ -697,6 +697,16 @@ class SearchApp(QWidget):
             self.input_id.setFocus()
             return
 
+        # Pastikan ID ada di database
+        try:
+            exists = any(int(x.get("id", -1)) == target for x in self.data_original)
+        except Exception:
+            exists = False
+        if not exists:
+            QMessageBox.warning(self, "ID Tidak Ditemukan", f"ID {target} tidak ditemukan dalam daftar barang.")
+            self.input_id.setFocus()
+            return
+
         # Pilihan algoritma
         pilihan = "Kedua Algoritma"
         if self.radio_seq.isChecked():
@@ -737,7 +747,7 @@ class SearchApp(QWidget):
                 add_result_item(row_idx, 3, f"{res['nama']} (ID: {res['id']})")
                 found_item = res
             else:
-                add_result_item(row_idx, 3, "Tidak ditemukan di dalam database", is_red=True)
+                add_result_item(row_idx, 3, "Tidak ditemukan dalam daftar barang", is_red=True)
                 
             if self.step_mode_enabled:
                 self.trace_area.append(f"<b>🎮 Trace (Sequential Search):</b><br>" + "<br>".join(logs) + "<br>")
@@ -761,7 +771,7 @@ class SearchApp(QWidget):
                 add_result_item(row_idx, 3, f"{res['nama']} (ID: {res['id']})")
                 found_item = res
             else:
-                add_result_item(row_idx, 3, "Tidak ditemukan di dalam database", is_red=True)
+                add_result_item(row_idx, 3, "Tidak ditemukan dalam daftar barang", is_red=True)
                 
             if self.step_mode_enabled:
                 self.trace_area.append(f"<b>🎮 Trace (Binary Search):</b><br>" + "<br>".join(logs) + "<br>")
@@ -919,7 +929,7 @@ class SearchApp(QWidget):
             body = (
                 f"Waktu eksekusi: <b style='color:#0f172a;'>{waktu:.6f}</b> detik<br>"
                 f"Jumlah perbandingan: <b style='color:#0f172a;'>{langkah}</b> kali<br>"
-                f"Hasil: <b style='color:#ef4444;'>Tidak ditemukan di dalam database</b>"
+                f"Hasil: <b style='color:#ef4444;'>Tidak ditemukan dalam daftar barang</b>"
             )
 
         return (
